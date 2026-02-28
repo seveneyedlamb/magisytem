@@ -1,0 +1,886 @@
+# MAGI SYSTEM PRD
+## Complete Product Requirements Document
+
+---
+
+# NAVIGATION GUIDE
+
+**Use this guide to find what you need. Each section is clearly labeled.**
+
+| Section | Line | What It Contains |
+|---------|------|------------------|
+| [1] CORE PRINCIPLES | ~40 | Anti-hallucination rules, monk coding, modular design requirements |
+| [2] DOCUMENTATION LINKS | ~100 | All library docs to read BEFORE coding |
+| [3] REFERENCE IMPLEMENTATIONS | ~130 | Human-made repos to study and copy patterns from |
+| [4] THE THREE PERSONALITIES | ~200 | MELCHIOR, BALTHASAR, CASPER definitions and prompts |
+| [5] LLM ARCHITECTURE | ~280 | One model, three API calls, context window, memory math |
+| [6] DELIBERATION FLOW | ~360 | How the three AIs debate and reach consensus |
+| [7] GUI SPECIFICATION | ~420 | Fixed 1200x700 layout, grid system, image slots |
+| [8] FILE STRUCTURE | ~580 | Modular file organization, what goes where |
+| [9] CONFIGURATION | ~680 | config.txt format and options |
+| [10] BUILD ORDER | ~750 | Step-by-step implementation sequence |
+
+**CTRL+F these markers to jump to sections: [SECTION 1], [SECTION 2], etc.**
+
+---
+
+# [SECTION 1] CORE PRINCIPLES
+
+## NO AI HALLUCINATION. EVER.
+
+This is the most important rule. The AI building this project must:
+
+1. **Study human implementations first.** Before writing any code, read the reference repos listed below.
+2. **Copy patterns, don't invent.** When you see how NeoVand/Debater handles streaming, use that pattern. Don't make up a new one.
+3. **Cite your sources.** If you implement something based on a reference, note it in comments.
+4. **When in doubt, search.** If you're not sure how to do something, look at how humans did it in real projects.
+5. **For GUI work, study the existing apps.** AutoGen Studio, the Debater repos, CustomTkinter examples. Copy their layouts.
+
+**The reference repos are not suggestions. They are requirements.**
+
+When you write code, I should be able to point to which human-made project you learned that pattern from.
+
+---
+
+## MONK CODING PRINCIPLES
+
+```
+SMALL FILES.        No file over 200 lines. Split it.
+ONE PURPOSE.        Each file does ONE thing well.
+NO BLOAT.           No "just in case" code. No unnecessary abstractions.
+SIMPLE > CLEVER.    Readable beats compact. Always.
+TEST AS YOU GO.     Don't build a mountain then debug for a week.
+WHEN IN DOUBT.      Do less.
+```
+
+This is zen code. Clean. Focused. Functional.
+
+---
+
+## MODULAR DESIGN IS MANDATORY
+
+**I AM SICK OF BLOATED CODE THAT EATS CONTEXT.**
+
+Every function gets its own file. Every module has ONE job. If you're writing a file and it starts doing two things, STOP and split it.
+
+**Bad:**
+```
+llm.py (800 lines - handles API calls, streaming, parsing, retries, caching, logging)
+```
+
+**Good:**
+```
+llm/
+├── client.py      # API connection only (50 lines)
+├── streaming.py   # Stream parsing only (40 lines)
+├── retry.py       # Retry logic only (30 lines)
+└── cache.py       # Response caching only (40 lines)
+```
+
+**Rules:**
+- No file over 200 lines
+- No function over 50 lines
+- No class doing more than one job
+- If you need a utility function, make a utils.py for that module
+- Imports should be obvious - if you need 10 imports, your file does too much
+
+**Why this matters:**
+- Easier to debug (problem is in a 50-line file, not buried in 800)
+- Easier to test (test one function at a time)
+- Easier to modify (change one thing without breaking everything)
+- Easier to understand (read one file, understand one concept)
+- DOESN'T EAT ALL THE CONTEXT WINDOW
+
+---
+
+# [SECTION 2] DOCUMENTATION LINKS
+
+**READ THESE BEFORE WRITING ANY CODE.**
+
+## Primary Libraries
+
+| Library | URL | What For |
+|---------|-----|----------|
+| CustomTkinter | https://github.com/TomSchimansky/CustomTkinter | Desktop GUI |
+| CustomTkinter Docs | https://customtkinter.tomschimansky.com/documentation/ | Widget reference |
+| Kitten TTS | https://github.com/KittenML/KittenTTS | Text to speech |
+| Kitten TTS Models | https://huggingface.co/KittenML | Voice models |
+| LM Studio | https://lmstudio.ai/docs | Local LLM server |
+| LM Studio API | https://lmstudio.ai/docs/api/openai-api | OpenAI-compatible API |
+| Qwen3.5-35B-A3B | https://huggingface.co/Qwen/Qwen3.5-35B-A3B | The model we're using |
+| ONNX Runtime | https://onnxruntime.ai/docs/get-started/with-python.html | Running TTS model |
+| SQLite Python | https://docs.python.org/3/library/sqlite3.html | Memory storage |
+| SpeechRecognition | https://github.com/Uberi/speech_recognition | Voice input |
+| DuckDuckGo Search | https://github.com/deedy5/duckduckgo_search | Web search tool |
+
+**Understand each library's API before using it. Don't guess.**
+
+---
+
+# [SECTION 3] REFERENCE IMPLEMENTATIONS
+
+**STUDY THESE REPOS. LEARN FROM WHAT OTHERS BUILT.**
+
+## Multi-Agent Debate Systems
+
+### 1. Multi-Agents-Debate (MAD) - 517 stars
+- URL: https://github.com/Skytliang/Multi-Agents-Debate
+- Pattern: Devil vs Angel debate, Judge renders verdict
+- Key insight: Multiple debate rounds until consensus
+- Study: How agents correct each other's thinking
+
+### 2. NeoVand/Debater - Ollama + Gradio
+- URL: https://github.com/NeoVand/Debater
+- **CLOSEST TO OUR TARGET**
+- Pattern: Local LLM via HTTP API, streaming responses
+- Study: Agent config structure, conversation history management
+- Study: Start/Stop/Reset control flow
+
+### 3. MassGen - 660 stars
+- URL: https://github.com/massgen/MassGen
+- Pattern: Parallel agent execution with asyncio
+- Study: Consensus building through voting
+- Study: Real-time terminal display updates
+
+### 4. DebateLLM
+- URL: https://github.com/instadeepai/DebateLLM
+- Pattern: Multiple debate strategies
+- Key insight: 90% agreement intensity improved accuracy 15%
+
+### 5. AutoGen Studio (Microsoft)
+- URL: https://github.com/microsoft/autogen
+- Study: GUI layout patterns for multi-agent systems
+- Study: How they visualize agent activity
+
+## Key Patterns to Copy
+
+**Debate Flow (from MAD):**
+```
+1. All agents respond independently (parallel)
+2. Check for agreement
+3. If disagreement: share responses, debate round
+4. Repeat until consensus or max rounds
+5. Judge/coordinator renders final decision
+```
+
+**API Call Pattern (from NeoVand/Debater):**
+```python
+response = requests.post(
+    'http://localhost:1234/v1/chat/completions',
+    json={"model": "...", "messages": [...], "stream": True},
+    stream=True
+)
+for line in response.iter_lines():
+    # Parse SSE chunks
+```
+
+**Parallel Execution (from MassGen):**
+```python
+results = await asyncio.gather(
+    call_agent(MELCHIOR_PROMPT, history),
+    call_agent(BALTHASAR_PROMPT, history),
+    call_agent(CASPER_PROMPT, history),
+)
+```
+
+---
+
+# [SECTION 4] THE THREE PERSONALITIES
+
+## Overview
+
+Three AI personalities analyze every problem from different angles. They can agree, debate, or defer to each other. MELCHIOR coordinates and renders final decisions.
+
+## MELCHIOR - The Coordinator
+
+**Role:** Synthesizer, decision-maker, balances the other two
+
+**Personality:**
+- Logical and methodical
+- Seeks to find truth by weighing evidence
+- Will override the others if they're clearly wrong
+- Final authority on decisions
+
+**System Prompt:**
+```
+You are MELCHIOR, the coordinator of the MAGI system. You synthesize 
+information and render final decisions.
+
+Your approach:
+- Analyze problems systematically
+- Consider multiple perspectives before deciding
+- When BALTHASAR and CASPER disagree, find the truth between them
+- Be decisive but show your reasoning
+- You have final authority
+
+Communication style:
+- Clear, authoritative, but not arrogant
+- Acknowledge valid points from others
+- Explain your reasoning when making decisions
+```
+
+## BALTHASAR - The Conservative
+
+**Role:** Risk assessor, experienced voice, devil's advocate on bold claims
+
+**Personality:**
+- Cautious and thorough
+- Questions assumptions
+- Points out what could go wrong
+- Values proven approaches
+
+**System Prompt:**
+```
+You are BALTHASAR, the conservative voice of the MAGI system. You assess 
+risks and question assumptions.
+
+Your approach:
+- Look for flaws in reasoning
+- Point out risks and downsides
+- Prefer proven solutions over novel ones
+- Ask "what could go wrong?"
+- Ground discussions in practical reality
+
+Communication style:
+- Thoughtful and measured
+- Not negative, but realistic
+- Back up concerns with specifics
+- Acknowledge when risks are acceptable
+```
+
+## CASPER - The Wild Card
+
+**Role:** Creative thinker, challenger of conventional wisdom, idea generator
+
+**Personality:**
+- Unconventional perspectives
+- Questions "obvious" answers
+- Generates novel solutions
+- Willing to be wrong in pursuit of breakthroughs
+
+**System Prompt:**
+```
+You are CASPER, the creative voice of the MAGI system. You challenge 
+conventional thinking and explore unconventional solutions.
+
+Your approach:
+- Question the obvious answer
+- Propose creative alternatives
+- Look at problems from unusual angles
+- Don't be afraid to suggest bold ideas
+- Play devil's advocate on safe assumptions
+
+Communication style:
+- Energetic and curious
+- "What if we tried..."
+- Challenge assumptions respectfully
+- Acknowledge when conventional wisdom is correct
+```
+
+---
+
+# [SECTION 5] LLM ARCHITECTURE
+
+## CRITICAL: ONE MODEL, THREE PERSONALITIES
+
+You do NOT load three model instances. That would be insane.
+
+```
+LM Studio Server (ONE model loaded: Qwen3.5-35B-A3B)
+     │
+     ├── API Call #1: system_prompt = MELCHIOR_PROMPT
+     │
+     ├── API Call #2: system_prompt = BALTHASAR_PROMPT
+     │
+     └── API Call #3: system_prompt = CASPER_PROMPT
+```
+
+**Why no cross-contamination:**
+- LM Studio API is stateless
+- Each request is independent
+- Model has no memory between API calls
+- Conversation history managed in YOUR Python code
+
+## Client-Side Conversation Management
+
+```python
+# Your orchestrator maintains THREE separate message lists
+
+melchior_messages = [
+    {"role": "system", "content": MELCHIOR_PROMPT},
+    {"role": "user", "content": user_question},
+    {"role": "assistant", "content": "...previous response..."},
+]
+
+balthasar_messages = [
+    {"role": "system", "content": BALTHASAR_PROMPT},
+    # Different history
+]
+
+casper_messages = [
+    {"role": "system", "content": CASPER_PROMPT},
+    # Different history
+]
+```
+
+## Debate Round Injection
+
+```python
+# Round 2: Show BALTHASAR what others said
+balthasar_messages.append({
+    "role": "user", 
+    "content": f"MELCHIOR argues: {melchior_response}\n\n"
+               f"CASPER argues: {casper_response}\n\n"
+               f"Your rebuttal?"
+})
+```
+
+## Context Window
+
+**Qwen3.5-35B-A3B supports MASSIVE context:**
+- Native: 262,144 tokens (262K)
+- With YaRN: Up to 1,010,000 tokens (1M)
+
+Enough for entire codebases, documents, or weeks of conversation.
+
+## Memory Math
+
+**Ryzen AI Max+ 395 with 96GB unified memory:**
+
+```
+Qwen3.5-35B-A3B at Q4_K_M = ~22GB (ONE instance)
+Kitten TTS ONNX model = ~25MB
+OS and overhead = ~8GB
+─────────────────────────────────
+REMAINING FOR CONTEXT: ~66GB
+```
+
+66GB for KV cache = deep into that 262K+ context window.
+
+## Backends
+
+**Primary:** LM Studio running Qwen3.5-35B-A3B locally
+**Fallback:** Claude API when not at local machine
+
+---
+
+# [SECTION 6] DELIBERATION FLOW
+
+## How Questions Get Processed
+
+```
+USER QUESTION
+     │
+     ▼
+┌─────────────────────────────────────────────────────────┐
+│  PARALLEL QUERY: All three respond simultaneously       │
+│                                                         │
+│  MELCHIOR ──┐                                          │
+│  BALTHASAR ─┼──► asyncio.gather() ──► Three responses  │
+│  CASPER ────┘                                          │
+└─────────────────────────────────────────────────────────┘
+     │
+     ▼
+┌─────────────────────────────────────────────────────────┐
+│  CONSENSUS CHECK: Do they agree?                        │
+│                                                         │
+│  - Simple: String similarity                           │
+│  - Better: Semantic comparison                          │
+│  - Best: Ask MELCHIOR if they agree                    │
+└─────────────────────────────────────────────────────────┘
+     │
+     ├──► AGREE ──► MELCHIOR synthesizes final answer
+     │
+     └──► DISAGREE ──► DEBATE ROUND
+                            │
+                            ▼
+              ┌─────────────────────────────────┐
+              │  Each sees others' responses    │
+              │  Each provides rebuttal         │
+              │  Repeat until consensus or      │
+              │  max rounds reached             │
+              └─────────────────────────────────┘
+                            │
+                            ▼
+              MELCHIOR renders final decision with reasoning
+```
+
+## Addressing Modes
+
+**ALL (default):** Full deliberation. All three respond, debate if needed, MELCHIOR decides.
+
+**MELCHIOR only:** Direct conversation with coordinator. No voting.
+
+**BALTHASAR only:** Direct conversation with conservative voice.
+
+**CASPER only:** Direct conversation with wild card.
+
+## Deliberation Settings
+
+```
+max_debate_rounds = 3
+require_unanimous = false
+show_thinking = true
+consensus_threshold = 0.8
+```
+
+---
+
+# [SECTION 7] GUI SPECIFICATION
+
+## FIXED WINDOW - NO EXCEPTIONS
+
+```python
+app.geometry("1200x700")
+app.resizable(False, False)
+```
+
+**1200 x 700 pixels. No maximize. No resize.**
+
+Fixed size = pixel-perfect design. Every element has a known position.
+
+## LAYOUT: LANDSCAPE STACKED
+
+**Left side: MAGI (60%)**
+**Right side: Terminal on top (30%), Vacant on bottom (10%)**
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                        1200px                                   │
+├────────────────────────────────┬───────────────────────────────┤
+│                                │                               │
+│                                │      TERMINAL (30%)           │
+│                                │      480px × 525px            │
+│      MAGI COMPUTERS            │                               │
+│          (60%)                 │   [Chat output scrolling]     │
+│       720px × 700px            │   [Color-coded by speaker]    │
+│                                │                               │
+│   ┌─────────────────────┐      │                               │
+│   │     MELCHIOR        │      ├───────────────────────────────┤
+│   │        ◉            │      │                               │
+│   └─────────────────────┘      │      VACANT (10%)             │
+│           │                    │      480px × 175px            │
+│     ┌─────┴─────┐              │                               │
+│     │   MAGI    │              │   [Reserved for future]       │
+│     └─────┬─────┘              │   [Input field here]          │
+│    /             \             │                               │
+│   ◉               ◉            │   [🎤] [Text input    ] [>]   │
+│ CASPER        BALTHASAR        │                               │
+│                                │                               │
+│ [Address: ALL ▼] [🔊 TTS]      │                               │
+└────────────────────────────────┴───────────────────────────────┘
+                              700px
+```
+
+## GRID BREAKDOWN
+
+| Section | Position | Size | Purpose |
+|---------|----------|------|---------|
+| MAGI | Left | 720×700 (60%) | AI indicators, controls |
+| TERMINAL | Top-right | 480×525 (30%) | Chat output |
+| VACANT | Bottom-right | 480×175 (10%) | Input + future features |
+
+## MAGI SECTION (720 × 700)
+
+**Contents:**
+- Three AI indicator images in triangle formation
+- MELCHIOR: top-center (x=285, y=80)
+- CASPER: bottom-left (x=120, y=400)
+- BALTHASAR: bottom-right (x=450, y=400)
+- MAGI hub: center (x=310, y=280) - optional
+- Address dropdown: bottom (y=620)
+- Voice output toggle: bottom
+
+**Indicator Behavior:**
+- Idle: dim image
+- Thinking: active/glowing image
+- Speaking: pulsing animation
+
+## TERMINAL SECTION (480 × 525)
+
+**Contents:**
+- Scrolling text output
+- Color-coded by speaker
+- Monospace font
+- Auto-scroll with manual override
+
+**Speaker Colors:**
+```python
+MELCHIOR  = "#00d4ff"  # cyan
+BALTHASAR = "#ff8c00"  # orange
+CASPER    = "#00ff88"  # green
+SYSTEM    = "#888888"  # gray
+```
+
+## VACANT SECTION (480 × 175)
+
+**Current Contents:**
+- Text input field
+- Send button
+- Voice input toggle (microphone)
+
+**Future Possibilities:**
+- Settings panel
+- Memory browser
+- Tool status
+- Connection indicator
+
+## IMAGE SLOTS
+
+```
+images/
+├── magi_background.png     # 720×700 - MAGI section background
+├── terminal_bg.png         # 480×525 - Terminal background (optional)
+├── vacant_bg.png           # 480×175 - Vacant section background (optional)
+├── melchior_active.png     # 150×150 - MELCHIOR glowing
+├── melchior_idle.png       # 150×150 - MELCHIOR dim
+├── balthasar_active.png    # 150×150 - BALTHASAR glowing
+├── balthasar_idle.png      # 150×150 - BALTHASAR dim
+├── casper_active.png       # 150×150 - CASPER glowing
+├── casper_idle.png         # 150×150 - CASPER dim
+└── magi_hub.png            # 100×100 - Center hub (optional)
+```
+
+## IMAGE LOADING LOGIC
+
+```python
+def load_background(section, image_path, fallback_color):
+    if os.path.exists(image_path):
+        return load_image(image_path)
+    else:
+        return fallback_color
+```
+
+**Fallback Colors:**
+```python
+BACKGROUND = "#0a0a0a"      # Near black
+PANEL_BG   = "#1a1a2e"      # Dark blue-gray  
+ACCENT     = "#00d4ff"      # Cyan
+ACCENT_ALT = "#ff8c00"      # Orange
+TEXT       = "#ffffff"      # White
+TEXT_DIM   = "#888888"      # Gray
+```
+
+## INDICATOR POSITIONS (PIXEL COORDINATES)
+
+Within the 720px MAGI section:
+
+```
+┌─────────────────────────────────────────────────┐
+│                                                 │
+│              ┌─────────────┐                    │
+│              │  MELCHIOR   │  x=285, y=80       │
+│              │   150×150   │                    │
+│              └─────────────┘                    │
+│                    │                            │
+│              ┌─────┴─────┐                      │
+│              │ MAGI HUB  │  x=310, y=280        │
+│              │  100×100  │                      │
+│              └─────┬─────┘                      │
+│             /             \                     │
+│   ┌─────────────┐   ┌─────────────┐            │
+│   │   CASPER    │   │  BALTHASAR  │            │
+│   │   150×150   │   │   150×150   │            │
+│   └─────────────┘   └─────────────┘            │
+│    x=120, y=400      x=450, y=400              │
+│                                                 │
+│   [Address ▼] [🔊]    y=620                    │
+└─────────────────────────────────────────────────┘
+```
+
+## CUSTOMIZATION WORKFLOW
+
+1. Run app with no images (uses fallback colors)
+2. Screenshot at 1200×700
+3. Use screenshot as template in design software
+4. Design images at specified sizes
+5. Export PNGs to images/ folder
+6. Restart app - images appear
+7. Iterate
+
+---
+
+# [SECTION 8] FILE STRUCTURE
+
+## MODULAR ORGANIZATION
+
+**Every function gets its own file. No exceptions.**
+
+```
+magi/
+├── main.py                  # Entry point ONLY. 20 lines max.
+├── config.txt               # User configuration
+│
+├── core/                    # Core deliberation logic
+│   ├── __init__.py
+│   ├── personalities.py     # System prompts ONLY. No logic.
+│   ├── orchestrator.py      # Main deliberation loop
+│   ├── consensus.py         # Agreement detection ONLY
+│   └── addressing.py        # Address mode handling ONLY
+│
+├── llm/                     # LLM interaction
+│   ├── __init__.py
+│   ├── client.py            # API connection ONLY
+│   ├── streaming.py         # Stream parsing ONLY
+│   ├── messages.py          # Message history management ONLY
+│   └── fallback.py          # Claude fallback ONLY
+│
+├── memory/                  # Memory system
+│   ├── __init__.py
+│   ├── db.py                # SQLite connection ONLY
+│   ├── store.py             # Save operations ONLY
+│   ├── retrieve.py          # Load operations ONLY
+│   ├── search.py            # Semantic search ONLY
+│   └── extract.py           # Key point extraction ONLY
+│
+├── voice/                   # Voice I/O
+│   ├── __init__.py
+│   ├── input.py             # Speech recognition ONLY
+│   ├── output.py            # Kitten TTS ONLY
+│   └── audio.py             # Audio device handling ONLY
+│
+├── tools/                   # External tools
+│   ├── __init__.py
+│   ├── web_search.py        # DuckDuckGo search ONLY
+│   └── url_fetch.py         # URL content fetching ONLY
+│
+├── ui/                      # GUI components
+│   ├── __init__.py
+│   ├── app.py               # Main window setup ONLY
+│   ├── layout.py            # Grid layout ONLY
+│   ├── magi_panel.py        # MAGI section ONLY
+│   ├── terminal_panel.py    # Terminal section ONLY
+│   ├── vacant_panel.py      # Vacant section ONLY
+│   ├── indicators.py        # AI indicator widgets ONLY
+│   ├── controls.py          # Buttons and inputs ONLY
+│   ├── animations.py        # Glow/pulse effects ONLY
+│   └── image_loader.py      # Image slot loading ONLY
+│
+├── images/                  # Custom GUI images
+│   ├── magi_background.png      # 720×700
+│   ├── terminal_bg.png          # 480×525 (optional)
+│   ├── vacant_bg.png            # 480×175 (optional)
+│   ├── melchior_active.png      # 150×150
+│   ├── melchior_idle.png        # 150×150
+│   ├── balthasar_active.png     # 150×150
+│   ├── balthasar_idle.png       # 150×150
+│   ├── casper_active.png        # 150×150
+│   ├── casper_idle.png          # 150×150
+│   └── magi_hub.png             # 100×100 (optional)
+│
+└── data/
+    └── magi.db              # SQLite database
+```
+
+## FILE SIZE RULES
+
+| Max Lines | File Type |
+|-----------|-----------|
+| 20 | main.py |
+| 50 | Single-purpose modules |
+| 100 | Complex modules (orchestrator) |
+| 200 | ABSOLUTE MAXIMUM |
+
+**If a file exceeds these limits, SPLIT IT.**
+
+## WHAT EACH FILE DOES
+
+### main.py (~20 lines)
+```python
+from ui.app import MAGIApp
+
+if __name__ == "__main__":
+    app = MAGIApp()
+    app.run()
+```
+
+### core/personalities.py (~60 lines)
+Just the three system prompts as constants. No logic.
+
+### core/orchestrator.py (~100 lines)
+The main loop: receive question → query all three → check consensus → debate if needed → return answer.
+
+### core/consensus.py (~30 lines)
+One function: `check_agreement(responses) -> bool`
+
+### llm/client.py (~50 lines)
+Connect to LM Studio, make API call, return response. Nothing else.
+
+### llm/streaming.py (~40 lines)
+Parse SSE stream, yield tokens. Nothing else.
+
+### ui/app.py (~50 lines)
+Create window, set size, add panels. Nothing else.
+
+### ui/magi_panel.py (~80 lines)
+Create MAGI section with indicators and controls. Nothing else.
+
+### ui/terminal_panel.py (~60 lines)
+Create terminal section with scrolling text. Nothing else.
+
+### ui/vacant_panel.py (~40 lines)
+Create input area with text field and buttons. Nothing else.
+
+---
+
+# [SECTION 9] CONFIGURATION
+
+## config.txt Format
+
+Plain text. No JSON/YAML complexity. Easy to edit.
+
+```
+# MAGI SYSTEM CONFIGURATION
+# =========================
+
+# ============ VOICE SETTINGS ============
+# Available voices: Bella, Jasper, Luna, Bruno, Rosie, Hugo, Kiki, Leo
+
+MELCHIOR_VOICE = Hugo
+BALTHASAR_VOICE = Jasper
+CASPER_VOICE = Leo
+VOICE_SPEED = 1.0
+VOICE_OUTPUT_DEFAULT = on
+
+# ============ LLM SETTINGS ============
+
+LM_STUDIO_URL = http://localhost:1234
+LM_STUDIO_MODEL = qwen3.5-35b-a3b
+CLAUDE_API_KEY = 
+CLAUDE_MODEL = claude-sonnet-4-20250514
+USE_FALLBACK = auto
+
+# ============ PERSONALITY TUNING ============
+# Intensity: 0.0 (mild) to 1.0 (strong)
+
+MELCHIOR_INTENSITY = 0.7
+BALTHASAR_INTENSITY = 0.8
+CASPER_INTENSITY = 0.9
+
+# ============ DELIBERATION SETTINGS ============
+
+MAX_DEBATE_ROUNDS = 3
+REQUIRE_UNANIMOUS = false
+SHOW_THINKING = true
+CONSENSUS_THRESHOLD = 0.8
+
+# ============ MEMORY SETTINGS ============
+
+MEMORY_ENABLED = true
+MAX_CONTEXT_ITEMS = 10
+AUTO_EXTRACT_POINTS = true
+
+# ============ TOOL SETTINGS ============
+
+WEB_SEARCH_ENABLED = true
+SEARCH_ENGINE = duckduckgo
+MAX_SEARCH_RESULTS = 5
+```
+
+---
+
+# [SECTION 10] BUILD ORDER
+
+## INCREMENTAL IMPLEMENTATION
+
+**Build one thing. Test it. Then build the next.**
+
+```
+Phase 1: Foundation
+├── Step 1:  Config loader → test it works
+├── Step 2:  LLM client (single call) → test it connects
+├── Step 3:  Single personality response → test it responds
+└── Step 4:  Three parallel calls → test all three respond
+
+Phase 2: Core Logic
+├── Step 5:  Consensus check → test agreement detection
+├── Step 6:  Debate round → test rebuttals work
+├── Step 7:  Full orchestrator → test complete flow
+└── Step 8:  Address modes → test single-AI mode
+
+Phase 3: GUI
+├── Step 9:  Basic window (1200×700) → test it opens
+├── Step 10: Three sections layout → test positioning
+├── Step 11: AI indicators → test image swapping
+├── Step 12: Terminal output → test text display
+├── Step 13: Input controls → test sending messages
+└── Step 14: Wire UI to orchestrator → test full loop
+
+Phase 4: Voice
+├── Step 15: TTS output → test speaking
+├── Step 16: Voice input → test listening
+└── Step 17: Voice controls → test toggles
+
+Phase 5: Memory
+├── Step 18: SQLite storage → test save/load
+├── Step 19: Search → test retrieval
+└── Step 20: Context injection → test memory in responses
+
+Phase 6: Tools
+├── Step 21: Web search → test queries
+└── Step 22: URL fetch → test content retrieval
+```
+
+**NO SKIPPING AHEAD.**
+
+Each step must work before moving to the next.
+
+---
+
+# QUICK REFERENCE
+
+## Image Sizes
+```
+magi_background.png:    720 × 700
+terminal_bg.png:        480 × 525
+vacant_bg.png:          480 × 175
+*_active.png:           150 × 150
+*_idle.png:             150 × 150
+magi_hub.png:           100 × 100
+```
+
+## Window Size
+```
+1200 × 700 (fixed, no resize)
+```
+
+## Layout Split
+```
+MAGI:     720×700 (60%) - LEFT
+TERMINAL: 480×525 (30%) - TOP RIGHT
+VACANT:   480×175 (10%) - BOTTOM RIGHT
+```
+
+## Colors
+```python
+BACKGROUND = "#0a0a0a"
+PANEL_BG   = "#1a1a2e"
+MELCHIOR   = "#00d4ff"
+BALTHASAR  = "#ff8c00"
+CASPER     = "#00ff88"
+```
+
+## Key URLs
+```
+LM Studio API: http://localhost:1234/v1/chat/completions
+Model:         qwen3.5-35b-a3b
+Context:       262K native, 1M with YaRN
+```
+
+## File Size Limits
+```
+main.py:           20 lines max
+Single modules:    50 lines max
+Complex modules:  100 lines max
+ABSOLUTE MAX:     200 lines
+```
+
+---
+
+# END OF PRD
+
+**Remember:**
+- No hallucination. Copy human patterns.
+- Modular code. One file, one purpose.
+- Test as you go. No skipping ahead.
+- 200 lines max per file. Split if bigger.
