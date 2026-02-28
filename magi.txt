@@ -5,22 +5,27 @@
 
 # NAVIGATION GUIDE
 
-**Use this guide to find what you need. Each section is clearly labeled.**
+**Use this guide to find what you need. CTRL+F the section markers.**
 
-| Section | Line | What It Contains |
-|---------|------|------------------|
-| [1] CORE PRINCIPLES | ~40 | Anti-hallucination rules, monk coding, modular design requirements |
-| [2] DOCUMENTATION LINKS | ~100 | All library docs to read BEFORE coding |
-| [3] REFERENCE IMPLEMENTATIONS | ~130 | Human-made repos to study and copy patterns from |
-| [4] THE THREE PERSONALITIES | ~200 | MELCHIOR, BALTHASAR, CASPER definitions and prompts |
-| [5] LLM ARCHITECTURE | ~280 | One model, three API calls, context window, memory math |
-| [6] DELIBERATION FLOW | ~360 | How the three AIs debate and reach consensus |
-| [7] GUI SPECIFICATION | ~420 | Fixed 1200x700 layout, grid system, image slots |
-| [8] FILE STRUCTURE | ~580 | Modular file organization, what goes where |
-| [9] CONFIGURATION | ~680 | config.txt format and options |
-| [10] BUILD ORDER | ~750 | Step-by-step implementation sequence |
-
-**CTRL+F these markers to jump to sections: [SECTION 1], [SECTION 2], etc.**
+| Section | Marker | What It Contains |
+|---------|--------|------------------|
+| Core Principles | [SECTION 1] | Anti-hallucination, monk coding, modular design |
+| Documentation | [SECTION 2] | Library docs to read BEFORE coding |
+| Reference Repos | [SECTION 3] | Human implementations to study and copy |
+| What This Is | [SECTION 4] | Product overview, Evangelion MAGI explanation |
+| Core Requirements | [SECTION 5] | Deliberation flow, memory system, voice, tech stack |
+| The Three Personalities | [SECTION 6] | MELCHIOR, BALTHASAR, CASPER definitions |
+| LLM Architecture | [SECTION 7] | One model, three API calls, context, memory math |
+| Deliberation Flow | [SECTION 8] | How questions get processed, debate rounds |
+| User Experience | [SECTION 9] | Main interface, voice interaction, memory access |
+| GUI Specification | [SECTION 10] | Fixed 1200x700 layout, image slots, colors |
+| File Structure | [SECTION 11] | Modular organization, what each file does |
+| Configuration | [SECTION 12] | config.txt format and all options |
+| Key Technical Notes | [SECTION 13] | Implementation details and tips |
+| Build Order | [SECTION 14] | Step-by-step implementation sequence |
+| Reference Lessons | [SECTION 15] | What to steal from each repo |
+| Summary | [SECTION 16] | Quick overview of the whole system |
+| Quick Reference | [SECTION 17] | Cheat sheet for common values |
 
 ---
 
@@ -97,8 +102,6 @@ llm/
 
 **READ THESE BEFORE WRITING ANY CODE.**
 
-## Primary Libraries
-
 | Library | URL | What For |
 |---------|-----|----------|
 | CustomTkinter | https://github.com/TomSchimansky/CustomTkinter | Desktop GUI |
@@ -107,8 +110,8 @@ llm/
 | Kitten TTS Models | https://huggingface.co/KittenML | Voice models |
 | LM Studio | https://lmstudio.ai/docs | Local LLM server |
 | LM Studio API | https://lmstudio.ai/docs/api/openai-api | OpenAI-compatible API |
-| Qwen3.5-35B-A3B | https://huggingface.co/Qwen/Qwen3.5-35B-A3B | The model we're using |
-| ONNX Runtime | https://onnxruntime.ai/docs/get-started/with-python.html | Running TTS model |
+| Qwen3.5-35B-A3B | https://huggingface.co/Qwen/Qwen3.5-35B-A3B | The model |
+| ONNX Runtime | https://onnxruntime.ai/docs/get-started/with-python.html | Running TTS |
 | SQLite Python | https://docs.python.org/3/library/sqlite3.html | Memory storage |
 | SpeechRecognition | https://github.com/Uberi/speech_recognition | Voice input |
 | DuckDuckGo Search | https://github.com/deedy5/duckduckgo_search | Web search tool |
@@ -126,79 +129,170 @@ llm/
 ### 1. Multi-Agents-Debate (MAD) - 517 stars
 - URL: https://github.com/Skytliang/Multi-Agents-Debate
 - Pattern: Devil vs Angel debate, Judge renders verdict
-- Key insight: Multiple debate rounds until consensus
-- Study: How agents correct each other's thinking
+- Multiple debate rounds until consensus
+- Key insight: Agents correct each other's distorted thinking
 
 ### 2. NeoVand/Debater - Ollama + Gradio
 - URL: https://github.com/NeoVand/Debater
-- **CLOSEST TO OUR TARGET**
-- Pattern: Local LLM via HTTP API, streaming responses
-- Study: Agent config structure, conversation history management
-- Study: Start/Stop/Reset control flow
+- **THIS IS CLOSEST TO WHAT WE'RE BUILDING**
+- Uses Ollama HTTP API for local LLM inference
+- Gradio for web UI with streaming
+- State management via gr.State
+- Memory size limits per agent
+- Start/Stop/Reset control flow
 
 ### 3. MassGen - 660 stars
 - URL: https://github.com/massgen/MassGen
-- Pattern: Parallel agent execution with asyncio
-- Study: Consensus building through voting
-- Study: Real-time terminal display updates
+- Parallel agent processing with asyncio
+- Consensus building through voting
+- Real-time terminal visualization with Textual library
+- LM Studio support for local models
+- **Study their orchestrator and consensus patterns**
 
 ### 4. DebateLLM
 - URL: https://github.com/instadeepai/DebateLLM
-- Pattern: Multiple debate strategies
-- Key insight: 90% agreement intensity improved accuracy 15%
+- Multiple debate strategies (Multi-Persona, Society of Minds)
+- Agreement intensity modulation
+- Key insight: 90% agreement improved accuracy 15%
 
-### 5. AutoGen Studio (Microsoft)
+### 5. llm-multiagent_debate - Original paper
+- URL: https://github.com/zhu0lin/llm-multiagent_debate
+- Clean Python, minimal dependencies
+- Simple debate loop pattern
+
+### 6. AutoGen Studio (Microsoft)
 - URL: https://github.com/microsoft/autogen
-- Study: GUI layout patterns for multi-agent systems
-- Study: How they visualize agent activity
+- Study GUI layout patterns for multi-agent systems
+- How they visualize agent activity
 
-## Key Patterns to Copy
+## Key Patterns Extracted
 
-**Debate Flow (from MAD):**
+**Debate Flow:**
 ```
-1. All agents respond independently (parallel)
-2. Check for agreement
+1. All agents respond independently (parallel API calls)
+2. Check for agreement (string matching or semantic)
 3. If disagreement: share responses, debate round
 4. Repeat until consensus or max rounds
-5. Judge/coordinator renders final decision
+5. Final judge/coordinator renders decision
 ```
 
-**API Call Pattern (from NeoVand/Debater):**
+**Consensus Detection:**
+- Simple: Check if answers match (string comparison)
+- Better: Semantic similarity check
+- Best: LLM-as-judge comparing answers
+
+**State Management:**
+- Each agent maintains conversation history
+- Shared context grows with each debate round
+- Memory limits prevent context overflow
+
+**API Pattern for Local LLMs:**
 ```python
 response = requests.post(
     'http://localhost:1234/v1/chat/completions',
-    json={"model": "...", "messages": [...], "stream": True},
+    json={
+        "model": "qwen3.5-35b-a3b",
+        "messages": messages,
+        "stream": True
+    },
     stream=True
 )
 for line in response.iter_lines():
-    # Parse SSE chunks
-```
-
-**Parallel Execution (from MassGen):**
-```python
-results = await asyncio.gather(
-    call_agent(MELCHIOR_PROMPT, history),
-    call_agent(BALTHASAR_PROMPT, history),
-    call_agent(CASPER_PROMPT, history),
-)
+    # Parse SSE chunks, yield tokens
 ```
 
 ---
 
-# [SECTION 4] THE THREE PERSONALITIES
+# [SECTION 4] WHAT THIS IS
 
 ## Overview
 
-Three AI personalities analyze every problem from different angles. They can agree, debate, or defer to each other. MELCHIOR coordinates and renders final decisions.
+A local AI assistant built on the Evangelion MAGI architecture. Three AI personalities analyze problems from different angles, debate when they disagree, and deliver a synthesized answer. It remembers past conversations. It speaks and listens.
+
+**This is a productivity tool. A panel of genius experts for real problem solving. Not a toy.**
+
+## How MAGI Works in Evangelion
+
+From the source material:
+
+- Three supercomputers vote on decisions
+- 2 out of 3 agreement = action proceeds
+- Critical decisions require unanimous consent
+- When solutions conflict, all options presented to human for final call
+- They calculate odds, determine optimal plans, do probability analysis
+- Fast, real-time crisis response
+- Each has distinct personality matrix leading to different solutions for same problem
+
+Key quote: "The final decision is left to human discretion" when they disagree.
+
+**They don't just answer. They deliberate.**
+
+## What Success Looks Like
+
+You sit down with a problem. You speak it or type it. Three experts argue it out. You hear MELCHIOR deliver the verdict. The system remembers this conversation. Next time a related problem comes up, it pulls in relevant context.
+
+Simple. Local. Functional. No cloud dependencies when running local mode.
+
+---
+
+# [SECTION 5] CORE REQUIREMENTS
+
+## Deliberation Flow
+
+1. User submits problem
+2. All three personalities respond independently (no cross-pollution)
+3. Check for agreement
+4. If disagreement: debate rounds where each sees the others' arguments
+5. MELCHIOR renders final decision with reasoning
+6. Store conversation to memory
+
+## Memory System
+
+The system remembers:
+- What we talked about
+- Summary of major key points  
+- How arguments played out
+- Past decisions and their reasoning
+
+Memory is searchable. When new problem comes in, relevant past context gets pulled in.
+
+Simple storage: SQLite. No external database setup.
+
+## Voice
+
+**Input**: Talk to it. Speech-to-text.
+
+**Output**: It talks back. Three different voices, one per personality. You know who's speaking without looking.
+
+**Toggle**: Turn voice off for text-only work when needed.
+
+**Model**: Kitten TTS (25MB ONNX model, runs on CPU, 8 voices available)
+
+## Technical Decisions
+
+**Stack**: Python + CustomTkinter + SQLite
+
+Why:
+- Native desktop app, no browser needed
+- Full control over visuals and animations
+- CustomTkinter handles modern styling easily
+- SQLite needs no setup
+- LM Studio has Python client ready
+- Kitten TTS runs via onnxruntime
+- Run one command, full screen app launches
+
+---
+
+# [SECTION 6] THE THREE PERSONALITIES
 
 ## MELCHIOR - The Coordinator
 
-**Role:** Synthesizer, decision-maker, balances the other two
+**Role:** Orchestrator, peacemaker, final decision maker
 
 **Personality:**
+- Listens to both sides, synthesizes, renders judgment
+- Doesn't pick favorites. Weighs evidence. Commits.
 - Logical and methodical
-- Seeks to find truth by weighing evidence
-- Will override the others if they're clearly wrong
 - Final authority on decisions
 
 **System Prompt:**
@@ -224,10 +318,11 @@ Communication style:
 **Role:** Risk assessor, experienced voice, devil's advocate on bold claims
 
 **Personality:**
-- Cautious and thorough
-- Questions assumptions
-- Points out what could go wrong
-- Values proven approaches
+- Doesn't like new methods
+- Likes old tried and true approaches
+- Battle-tested solutions only
+- Asks "what happens when this breaks?"
+- Suspicious of hype
 
 **System Prompt:**
 ```
@@ -253,10 +348,12 @@ Communication style:
 **Role:** Creative thinker, challenger of conventional wisdom, idea generator
 
 **Personality:**
-- Unconventional perspectives
-- Questions "obvious" answers
-- Generates novel solutions
-- Willing to be wrong in pursuit of breakthroughs
+- Wants the best and newest
+- Reads Reddit coder forums, Hacker News
+- The clever one. The trickster. The jokester.
+- Doesn't think in straight lines
+- Thinks outside the box
+- Does things differently than anyone else
 
 **System Prompt:**
 ```
@@ -279,7 +376,7 @@ Communication style:
 
 ---
 
-# [SECTION 5] LLM ARCHITECTURE
+# [SECTION 7] LLM ARCHITECTURE
 
 ## CRITICAL: ONE MODEL, THREE PERSONALITIES
 
@@ -323,6 +420,31 @@ casper_messages = [
 ]
 ```
 
+## Parallel Execution
+
+```python
+import asyncio
+import aiohttp
+
+async def call_personality(session, system_prompt, messages):
+    payload = {
+        "model": "qwen3.5-35b-a3b",
+        "messages": [{"role": "system", "content": system_prompt}] + messages,
+        "stream": False
+    }
+    async with session.post('http://localhost:1234/v1/chat/completions', json=payload) as resp:
+        return await resp.json()
+
+async def get_all_responses(user_question):
+    async with aiohttp.ClientSession() as session:
+        results = await asyncio.gather(
+            call_personality(session, MELCHIOR_PROMPT, melchior_history),
+            call_personality(session, BALTHASAR_PROMPT, balthasar_history),
+            call_personality(session, CASPER_PROMPT, casper_history),
+        )
+        return results
+```
+
 ## Debate Round Injection
 
 ```python
@@ -364,7 +486,7 @@ REMAINING FOR CONTEXT: ~66GB
 
 ---
 
-# [SECTION 6] DELIBERATION FLOW
+# [SECTION 8] DELIBERATION FLOW
 
 ## How Questions Get Processed
 
@@ -383,10 +505,6 @@ USER QUESTION
      ▼
 ┌─────────────────────────────────────────────────────────┐
 │  CONSENSUS CHECK: Do they agree?                        │
-│                                                         │
-│  - Simple: String similarity                           │
-│  - Better: Semantic comparison                          │
-│  - Best: Ask MELCHIOR if they agree                    │
 └─────────────────────────────────────────────────────────┘
      │
      ├──► AGREE ──► MELCHIOR synthesizes final answer
@@ -403,30 +521,65 @@ USER QUESTION
                             │
                             ▼
               MELCHIOR renders final decision with reasoning
+                            │
+                            ▼
+              Store conversation to memory
 ```
 
 ## Addressing Modes
 
 **ALL (default):** Full deliberation. All three respond, debate if needed, MELCHIOR decides.
 
-**MELCHIOR only:** Direct conversation with coordinator. No voting.
+**MELCHIOR only:** Direct conversation with coordinator. No voting, just his synthesis.
 
-**BALTHASAR only:** Direct conversation with conservative voice.
+**BALTHASAR only:** Direct conversation with conservative. Get the cautious take.
 
-**CASPER only:** Direct conversation with wild card.
+**CASPER only:** Direct conversation with wild card. Get the creative take.
 
-## Deliberation Settings
+Dropdown selector in UI. When addressing single AI, that AI's panel glows, others dim.
 
-```
-max_debate_rounds = 3
-require_unanimous = false
-show_thinking = true
-consensus_threshold = 0.8
-```
+## Tool Use
+
+Qwen3.5 supports tools. The MAGI system can:
+
+- Search the web for current information
+- Look things up when it doesn't know
+- Fetch URLs and read content
+- Run searches to inform its recommendations
+
+When an AI needs external info to answer properly, it searches. Results show in the terminal.
+
+This makes it a real assistant, not just a chat bot working from stale training data.
 
 ---
 
-# [SECTION 7] GUI SPECIFICATION
+# [SECTION 9] USER EXPERIENCE
+
+## Main Interface
+
+- Large text input (or mic button for voice)
+- Three panels showing each personality's response
+- Final decision prominently displayed
+- History sidebar for past conversations
+
+## Voice Interaction
+
+- Click mic or keyboard shortcut to speak
+- Transcription appears in input
+- Submit when ready
+- Final decision spoken aloud in MELCHIOR's voice
+- Option to hear any response in that personality's voice
+
+## Memory Access
+
+- Search past conversations
+- View how past arguments played out
+- See extracted key points and decisions
+- Edit or delete memories as needed
+
+---
+
+# [SECTION 10] GUI SPECIFICATION
 
 ## FIXED WINDOW - NO EXCEPTIONS
 
@@ -472,15 +625,15 @@ Fixed size = pixel-perfect design. Every element has a known position.
                               700px
 ```
 
-## GRID BREAKDOWN
+## Grid Breakdown
 
 | Section | Position | Size | Purpose |
 |---------|----------|------|---------|
-| MAGI | Left | 720×700 (60%) | AI indicators, controls |
-| TERMINAL | Top-right | 480×525 (30%) | Chat output |
-| VACANT | Bottom-right | 480×175 (10%) | Input + future features |
+| MAGI | Left | 720×700 (60%) | AI indicators, address controls, voice toggle |
+| TERMINAL | Top-right | 480×525 (30%) | Chat output, scrolling log |
+| VACANT | Bottom-right | 480×175 (10%) | Input field, send button, future features |
 
-## MAGI SECTION (720 × 700)
+## MAGI Section (720 × 700)
 
 **Contents:**
 - Three AI indicator images in triangle formation
@@ -496,7 +649,7 @@ Fixed size = pixel-perfect design. Every element has a known position.
 - Thinking: active/glowing image
 - Speaking: pulsing animation
 
-## TERMINAL SECTION (480 × 525)
+## Terminal Section (480 × 525)
 
 **Contents:**
 - Scrolling text output
@@ -512,7 +665,7 @@ CASPER    = "#00ff88"  # green
 SYSTEM    = "#888888"  # gray
 ```
 
-## VACANT SECTION (480 × 175)
+## Vacant Section (480 × 175)
 
 **Current Contents:**
 - Text input field
@@ -525,7 +678,7 @@ SYSTEM    = "#888888"  # gray
 - Tool status
 - Connection indicator
 
-## IMAGE SLOTS
+## Image Slots
 
 ```
 images/
@@ -541,17 +694,18 @@ images/
 └── magi_hub.png            # 100×100 - Center hub (optional)
 ```
 
-## IMAGE LOADING LOGIC
+## Image Loading Logic
 
 ```python
-def load_background(section, image_path, fallback_color):
+def load_background(image_path, fallback_color):
     if os.path.exists(image_path):
         return load_image(image_path)
     else:
         return fallback_color
 ```
 
-**Fallback Colors:**
+## Color Palette
+
 ```python
 BACKGROUND = "#0a0a0a"      # Near black
 PANEL_BG   = "#1a1a2e"      # Dark blue-gray  
@@ -561,7 +715,7 @@ TEXT       = "#ffffff"      # White
 TEXT_DIM   = "#888888"      # Gray
 ```
 
-## INDICATOR POSITIONS (PIXEL COORDINATES)
+## Indicator Positions (Pixel Coordinates)
 
 Within the 720px MAGI section:
 
@@ -588,7 +742,7 @@ Within the 720px MAGI section:
 └─────────────────────────────────────────────────┘
 ```
 
-## CUSTOMIZATION WORKFLOW
+## Customization Workflow
 
 1. Run app with no images (uses fallback colors)
 2. Screenshot at 1200×700
@@ -600,7 +754,7 @@ Within the 720px MAGI section:
 
 ---
 
-# [SECTION 8] FILE STRUCTURE
+# [SECTION 11] FILE STRUCTURE
 
 ## MODULAR ORGANIZATION
 
@@ -668,11 +822,14 @@ magi/
 │   ├── casper_idle.png          # 150×150
 │   └── magi_hub.png             # 100×100 (optional)
 │
+├── assets/
+│   └── fonts/               # Custom fonts if needed
+│
 └── data/
     └── magi.db              # SQLite database
 ```
 
-## FILE SIZE RULES
+## File Size Rules
 
 | Max Lines | File Type |
 |-----------|-----------|
@@ -683,7 +840,7 @@ magi/
 
 **If a file exceeds these limits, SPLIT IT.**
 
-## WHAT EACH FILE DOES
+## What Each File Does
 
 ### main.py (~20 lines)
 ```python
@@ -723,7 +880,7 @@ Create input area with text field and buttons. Nothing else.
 
 ---
 
-# [SECTION 9] CONFIGURATION
+# [SECTION 12] CONFIGURATION
 
 ## config.txt Format
 
@@ -731,7 +888,6 @@ Plain text. No JSON/YAML complexity. Easy to edit.
 
 ```
 # MAGI SYSTEM CONFIGURATION
-# =========================
 
 # ============ VOICE SETTINGS ============
 # Available voices: Bella, Jasper, Luna, Bruno, Rosie, Hugo, Kiki, Leo
@@ -739,47 +895,67 @@ Plain text. No JSON/YAML complexity. Easy to edit.
 MELCHIOR_VOICE = Hugo
 BALTHASAR_VOICE = Jasper
 CASPER_VOICE = Leo
-VOICE_SPEED = 1.0
+
 VOICE_OUTPUT_DEFAULT = on
+VOICE_INPUT_DEFAULT = off
+VOICE_SPEED = 1.0
 
 # ============ LLM SETTINGS ============
+LM_STUDIO_URL = http://localhost:1234/v1
+MODEL_NAME = qwen3.5-35b-a3b
 
-LM_STUDIO_URL = http://localhost:1234
-LM_STUDIO_MODEL = qwen3.5-35b-a3b
+# Claude fallback (leave empty if not using)
 CLAUDE_API_KEY = 
-CLAUDE_MODEL = claude-sonnet-4-20250514
-USE_FALLBACK = auto
 
 # ============ PERSONALITY TUNING ============
-# Intensity: 0.0 (mild) to 1.0 (strong)
+# Adjust personality intensity (0.0 to 1.0)
+# Higher = more extreme personality traits
 
 MELCHIOR_INTENSITY = 0.7
 BALTHASAR_INTENSITY = 0.8
 CASPER_INTENSITY = 0.9
 
-# ============ DELIBERATION SETTINGS ============
+# Custom personality additions (appended to base prompt)
+MELCHIOR_EXTRA = 
+BALTHASAR_EXTRA = 
+CASPER_EXTRA = 
 
+# ============ DELIBERATION SETTINGS ============
 MAX_DEBATE_ROUNDS = 3
 REQUIRE_UNANIMOUS = false
 SHOW_THINKING = true
 CONSENSUS_THRESHOLD = 0.8
 
 # ============ MEMORY SETTINGS ============
-
 MEMORY_ENABLED = true
 MAX_CONTEXT_ITEMS = 10
-AUTO_EXTRACT_POINTS = true
+AUTO_EXTRACT_KEYPOINTS = true
 
 # ============ TOOL SETTINGS ============
-
 WEB_SEARCH_ENABLED = true
 SEARCH_ENGINE = duckduckgo
 MAX_SEARCH_RESULTS = 5
+
+# ============ UI SETTINGS ============
+TERMINAL_FONT_SIZE = 12
+ANIMATION_SPEED = 1.0
+THEME = dark
 ```
 
 ---
 
-# [SECTION 10] BUILD ORDER
+# [SECTION 13] KEY TECHNICAL NOTES
+
+- Kitten TTS is an ONNX model. Run via onnxruntime in Python.
+- LM Studio exposes OpenAI-compatible API at localhost:1234
+- Three model instances means three separate API calls with different system prompts
+- Qwen3.5 supports tool use natively. Define tools in the API call, model decides when to use them.
+- CustomTkinter handles the desktop UI with animations
+- SQLite stores conversations as JSON blobs with embeddings for search
+
+---
+
+# [SECTION 14] BUILD ORDER
 
 ## INCREMENTAL IMPLEMENTATION
 
@@ -827,7 +1003,57 @@ Each step must work before moving to the next.
 
 ---
 
-# QUICK REFERENCE
+# [SECTION 15] REFERENCE LESSONS
+
+## What to Steal From Each Implementation
+
+### From NeoVand/Debater (Ollama + Gradio)
+- How to structure Ollama API calls with streaming
+- State management pattern
+- Agent configuration (name, system prompt, model, temperature, memory size)
+- Start/Stop/Reset control flow
+- Conversation history management
+
+### From MassGen (Multi-agent orchestration)
+- Parallel agent execution with asyncio
+- Voting/consensus mechanisms
+- Real-time terminal display updates
+- Orchestrator pattern coordinating multiple agents
+- How they handle agent disagreement
+
+### From MAD (Academic debate)
+- Devil/Angel/Judge three-role pattern (maps to MELCHIOR/BALTHASAR/CASPER)
+- Debate round structure
+- How judge synthesizes opposing views
+- Prompt engineering for debate personas
+
+### From DebateLLM
+- Agreement intensity affects quality (90% agreement boosted accuracy 15%)
+- Different debate protocols for different tasks
+- Benchmarking approach
+
+### From AutoGen Studio
+- GUI layout for multi-agent visualization
+- How to show agent activity in real-time
+- Panel/workspace organization
+
+**DO NOT copy code. Learn the patterns. Write clean implementations.**
+
+---
+
+# [SECTION 16] SUMMARY
+
+Local AI assistant with Evangelion MAGI aesthetics. Three personalities debate problems. Terminal shows their thinking in real-time. Glowing panels show who's active. Speaks and listens. Remembers everything. Searches the web when needed.
+
+Dark UI. Orange and cyan. Japanese kanji. Full screen. Config via text file.
+
+Python + CustomTkinter + SQLite + LM Studio + Kitten TTS.
+
+Run it. Use it. Done.
+
+---
+
+# [SECTION 17] QUICK REFERENCE
 
 ## Image Sizes
 ```
@@ -858,6 +1084,7 @@ PANEL_BG   = "#1a1a2e"
 MELCHIOR   = "#00d4ff"
 BALTHASAR  = "#ff8c00"
 CASPER     = "#00ff88"
+SYSTEM     = "#888888"
 ```
 
 ## Key URLs
@@ -875,6 +1102,13 @@ Complex modules:  100 lines max
 ABSOLUTE MAX:     200 lines
 ```
 
+## Voice Assignment
+```
+MELCHIOR:  Hugo or Bruno (authoritative)
+BALTHASAR: Jasper (experienced, older)
+CASPER:    Leo or Kiki (energetic, quick)
+```
+
 ---
 
 # END OF PRD
@@ -884,3 +1118,7 @@ ABSOLUTE MAX:     200 lines
 - Modular code. One file, one purpose.
 - Test as you go. No skipping ahead.
 - 200 lines max per file. Split if bigger.
+
+**This is a productivity tool. A panel of genius experts. Not a toy.**
+
+Run it. Use it. Done.
