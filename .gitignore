@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# LM Studio / local config (may contain local paths or keys)
+config.txt
+
+# Data cache
+data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Memory sessions (too noisy for git -- only pinned and clipboard sync)
+memory/sessions/
+
+# Test artifacts
+*.log
